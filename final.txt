@@ -1,0 +1,13 @@
+ss://Y2hhY2hhMjAtaWV0Zi1wb2x5MTMwNTpmOGY3YUN6Y1BLYnNGOHAz@181.119.30.20:990#%F0%9F%87%A6%F0%9F%87%B7AR%28AzadNet.t.me%29
+ss://YWVzLTI1Ni1nY206a0RXdlhZWm9UQmNHa0M0@23.154.136.44:8881#%F0%9F%87%A8%F0%9F%87%A6CA%28AzadNet.t.me%29
+ss://Y2hhY2hhMjAtaWV0Zi1wb2x5MTMwNTpmOGY3YUN6Y1BLYnNGOHAz@79.127.233.170:990#%F0%9F%87%A8%F0%9F%87%BFCZ%28AzadNet.t.me%29
+ss://Y2hhY2hhMjAtaWV0Zi1wb2x5MTMwNTp1MTdUM0J2cFlhYWl1VzJj@api.namasha.co:443#%F0%9F%87%AC%F0%9F%87%A7GB%28AzadNet.t.me%29
+ss://Y2hhY2hhMjAtaWV0Zi1wb2x5MTMwNTp1MTdUM0J2cFlhYWl1VzJj@series-a2-mec.varzesh360.co:443#%F0%9F%87%AC%F0%9F%87%A7GB%28AzadNet.t.me%29
+ss://Y2hhY2hhMjAtaWV0Zi1wb2x5MTMwNTp1MTdUM0J2cFlhYWl1VzJj@series-a2-mec.samanehha.co:443#%F0%9F%87%AC%F0%9F%87%A7GB%28AzadNet.t.me%29
+ss://Y2hhY2hhMjAtaWV0Zi1wb2x5MTMwNTpXc3R1U25sdTRpZUE5TTBM@admin.c2.webramz.co:443#%F0%9F%87%AC%F0%9F%87%A7GB%28AzadNet.t.me%29
+vless://a2691bdd-7989-4e7e-9c44-302e360c021f@185.208.77.113:14040/?type=ws&encryption=none&flow=&path=%2F#%F0%9F%87%AE%F0%9F%87%B7IR%28AzadNet.t.me%29
+vless://df0680ca-e43c-498d-ed86-8e196eedd012@84.32.9.7:8880/?type=grpc&encryption=none&flow=#%F0%9F%87%B1%F0%9F%87%B9LT%28AzadNet.t.me%29
+vless://df0680ca-e43c-498d-ed86-8e196eedd012@84.32.9.209:8880/?type=grpc&encryption=none&flow=#%F0%9F%87%B1%F0%9F%87%B9LT%28AzadNet.t.me%29
+vless://df0680ca-e43c-498d-ed86-8e196eedd012@84.32.9.26:8880/?type=grpc&encryption=none&flow=#%F0%9F%87%B1%F0%9F%87%B9LT%28AzadNet.t.me%29
+vless://df0680ca-e43c-498d-ed86-8e196eedd012@5.199.169.208:8880/?type=grpc&encryption=none&flow=#%F0%9F%87%B1%F0%9F%87%B9LT%28AzadNet.t.me%29
+ss://Y2hhY2hhMjAtaWV0Zi1wb2x5MTMwNTpmOGY3YUN6Y1BLYnNGOHAz@185.93.173.218:990#%F0%9F%87%B2%F0%9F%87%A9MD%28AzadNet.t.me%29
