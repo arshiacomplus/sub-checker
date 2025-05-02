@@ -19,7 +19,7 @@ import base64
 import urllib.parse
 import urllib.request
 import signal
-TH_MAX_WORKER=5
+TH_MAX_WORKER=25
 CONF_PATH="config.json"
 with open(CONF_PATH,"r") as file_client_set:
         f=json.load(file_client_set)
