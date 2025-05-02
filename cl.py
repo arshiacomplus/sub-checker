@@ -1335,17 +1335,20 @@ def get_public_ipv4(t,port) -> Optional[str]:
         Optional[str]: آدرس عمومی IPv4 به صورت رشته در صورت یافتن، در غیر این صورت None.
     """
     ip_address_v4: Optional[str] = None # متغیری برای ذخیره IP یافت شده
-    timeout = 10
+    timeout = 15
     url_v4 = "http://v4.ipv6-test.com/api/myip.php" # فقط به این URL نیاز داریم
+    proxy_host = f"127.0.0.{t}"
     proxies = {
-        "http": f"http://{f"120.0.0.{t}"}:{port}",
-        "https": f"http://{f"120.0.0.{t}"}:{port}" # HTTPS requests also go through the HTTP proxy
+        "http": f"http://{proxy_host}:{port}",
+        "https": f"http://{proxy_host}:{port}" # HTTPS requests also go through the HTTP proxy
     }
-
+    headers = {
+        "Connection": "close" # Explicitly close connection
+    }
     print("Attempting to fetch public IPv4 address...")
     try:
         # فقط درخواست IPv4 را ارسال می‌کنیم
-        response = requests.get(url_v4, timeout=timeout,proxies=proxies)
+        response = requests.get(url_v4, timeout=timeout,proxies=proxies,headers=headers)
         response.raise_for_status()  # بررسی خطاهای HTTP (مثل 4xx, 5xx)
 
         # متن پاسخ را می‌خوانیم و فضاهای خالی احتمالی را حذف می‌کنیم
