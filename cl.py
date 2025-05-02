@@ -353,6 +353,7 @@ def parse_configs(conifg,num=0,cv=1,hy2_path="hy2/config.yaml",is_hy2=False): # 
         return params
     conifg=urllib.parse.unquote(conifg)
     dict_conf=parse_configs_by_get(conifg)
+    print("the cv is"+ cv)
     LOCAL_HOST="127.0.0."+str(cv)
     DEFAULT_PORT = 443
     DEFAULT_SECURITY = "auto"
