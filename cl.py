@@ -1470,7 +1470,7 @@ def ping_all():
                 FIN_CONF.append(i)
                 if CHECK_LOC:
                     with open(CHECK_RES, "a") as f:
-                        f.write(get_ip_details(get_public_ipv4())+"\n")
+                        f.write(get_ip_details(f"127.0.0.{t+2}")+"\n")
             if not is_dict:
                 if i.startswith("hy2://") or i.startswith("hysteria2://"):
                     process_manager.stop_process(f"hysteria_{t}")
