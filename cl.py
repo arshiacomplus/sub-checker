@@ -28,7 +28,7 @@ TEXT_PATH="normal.txt"
 LINK_PATH=[] # [ "link1" , "link2" , ... ]
 FIN_PATH="final.txt"
 FIN_CONF=[]
-CHECK_LOC=False
+CHECK_LOC=True
 CHECK_RES="loc.txt"
 if CHECK_LOC:
     with open(CHECK_RES, "w") as f:
