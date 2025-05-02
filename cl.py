@@ -19,7 +19,7 @@ import base64
 import urllib.parse
 import urllib.request
 import signal
-TH_MAX_WORKER=25
+TH_MAX_WORKER=5
 CONF_PATH="config.json"
 with open(CONF_PATH,"r") as file_client_set:
         f=json.load(file_client_set)
@@ -28,7 +28,7 @@ TEXT_PATH="normal.txt"
 LINK_PATH=[] # [ "link1" , "link2" , ... ]
 FIN_PATH="final.txt"
 FIN_CONF=[]
-CHECK_LOC=True
+CHECK_LOC=False
 CHECK_RES="loc.txt"
 if CHECK_LOC:
     with open(CHECK_RES, "w") as f:
@@ -1409,6 +1409,8 @@ def ping_all():
         return {key: update_value(value) for key, value in input_dict.items()}
     def process_ping(i:str, t,counter=2) :
         print(i)
+        while t > 100:
+            t-=100
         path_test_file=f"xray/config_test_ping{'' if t==0 else str(t)}.json"
         hy2_path_test_file=f"hy2/config{'' if t==0 else str(t)}.yaml"
         result="-1"
@@ -1507,4 +1509,3 @@ with open(FIN_PATH,"w") as f:
     except Exception as e:
         print(f"Unexpected error writing to {FIN_PATH}: {e}")
 exit()
-
