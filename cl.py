@@ -162,7 +162,7 @@ def parse_configs(conifg,num=0,cv=1,hy2_path="hy2/config.yaml",is_hy2=False): # 
             if not protocol:
                 raise ValueError("Invalid protocol")
             common_params = {"protocol": protocol, "tag": tag}
-            if protocol in ["vless", "vmess", "trojan"]:
+            if protocol in ["vless", "trojan"]:
                 match = re.search(r'([^:]+)@([^:]+):(\d+)', main_config)
                 if match:
                     common_params.update({
@@ -242,10 +242,20 @@ def parse_configs(conifg,num=0,cv=1,hy2_path="hy2/config.yaml",is_hy2=False): # 
             mode=params.get("mode", None)
         )
     def parse_vmess(config: str, common: dict) -> ConfigParams:
-        decoded = base64.b64decode(config.split("://")[1]).decode("utf-8")
+        encoded_part = config.split("://")[1]
+        missing_padding = len(encoded_part) % 4
+        if missing_padding:
+            encoded_part += '=' * (4 - missing_padding)
+        decoded = base64.b64decode(encoded_part).decode("utf-8")
         vmess_data = json.loads(decoded)
+        address = vmess_data.get("add", "")
+        port = int(vmess_data.get("port", 0))
+        tag = vmess_data.get("ps", "none")
         return ConfigParams(
-            **common,
+            protocol=common.get("protocol",""),
+            address=address,
+            port=port,
+            tag=tag,
             id=vmess_data.get("id", ""),
             alter_id=int(vmess_data.get("aid", 0)),
             scy=vmess_data.get("scy", ""),
