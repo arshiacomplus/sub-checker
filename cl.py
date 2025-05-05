@@ -251,11 +251,13 @@ def parse_configs(conifg,num=0,cv=1,hy2_path="hy2/config.yaml",is_hy2=False): # 
         address = vmess_data.get("add", "")
         port = int(vmess_data.get("port", 0))
         tag = vmess_data.get("ps", "none")
+        sec=vmess_data.get("tls", "")
         return ConfigParams(
             protocol=common.get("protocol",""),
             address=address,
             port=port,
             tag=tag,
+            security=sec,
             id=vmess_data.get("id", ""),
             alter_id=int(vmess_data.get("aid", 0)),
             scy=vmess_data.get("scy", ""),
@@ -1184,9 +1186,9 @@ def parse_configs(conifg,num=0,cv=1,hy2_path="hy2/config.yaml",is_hy2=False): # 
         elif TYPE=="grpc":
             outboundBean_Stream_grpc_settings=V2rayConfig.OutboundBean.GrpcSettingsBean(authority=R_HOST,serviceName=PATH,multiMode=MODE,)
         if SECURITY!="reality":
-            outboundBean_Stream_tlssettings=V2rayConfig.OutboundBean.TlsSettingsBean(allowInsecure=ALLOWINCREASE,alpn=None,fingerprint=None,serverName=SNI,show=False)
+            outboundBean_Stream_tlssettings=V2rayConfig.OutboundBean.TlsSettingsBean(allowInsecure=ALLOWINCREASE,alpn=ALPN,fingerprint=FP,serverName=SNI,show=False)
         else:
-            outboundBean_Stream_tlssettings=V2rayConfig.OutboundBean.TlsSettingsBean(allowInsecure=ALLOWINCREASE,alpn=None,fingerprint=None,publicKey=PBK,serverName=SNI,shortId=SID,spiderX=SPX,show=False)
+            outboundBean_Stream_tlssettings=V2rayConfig.OutboundBean.TlsSettingsBean(allowInsecure=ALLOWINCREASE,alpn=ALPN,fingerprint=FP,publicKey=PBK,serverName=SNI,shortId=SID,spiderX=SPX,show=False)
         if FRAGMENT:
             if  SECURITY=="reality" :
                 if TYPE=="tcp":
