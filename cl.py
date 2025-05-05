@@ -258,7 +258,7 @@ def parse_configs(conifg,num=0,cv=1,hy2_path="hy2/config.yaml",is_hy2=False): # 
             tag=tag,
             id=vmess_data.get("id", ""),
             alter_id=int(vmess_data.get("aid", 0)),
-            scy=vmess_data.get("scy", ""),
+            scy=vmess_data.get("scy", "auto"),
             sni=vmess_data.get("sni", ""),
             fp=vmess_data.get("fp", ""),
             type=vmess_data.get("net","tcp"),
@@ -660,12 +660,13 @@ def parse_configs(conifg,num=0,cv=1,hy2_path="hy2/config.yaml",is_hy2=False): # 
                     self.seed = seed
             class WsSettingsBean:
                 def __init__(self, path: str = "", headers: Optional['V2rayConfig.OutboundBean.HeadersBean'] = None, maxEarlyData: Optional[int] = None,
-                            useBrowserForwarding: Optional[bool] = None, acceptProxyProtocol: Optional[bool] = None):
+                            useBrowserForwarding: Optional[bool] = None, acceptProxyProtocol: Optional[bool] = None,host: Optional[str] = None,):
                     self.path = path
                     self.headers = headers if headers is not None else V2rayConfig.OutboundBean.HeadersBean(Host_single="")
                     self.maxEarlyData = maxEarlyData
                     self.useBrowserForwarding = useBrowserForwarding
                     self.acceptProxyProtocol = acceptProxyProtocol
+                    self.host = host
             class HttpupgradeSettingsBean:
                 def __init__(self, path: str = "", host: str = "", acceptProxyProtocol: Optional[bool] = None):
                     self.path = path
@@ -1165,7 +1166,11 @@ def parse_configs(conifg,num=0,cv=1,hy2_path="hy2/config.yaml",is_hy2=False): # 
         if TYPE=="kcp":
             outboundBean_Stream_kcp_settings=V2rayConfig.OutboundBean.KcpSettingsBean(congestion=False,downlinkCapacity=100,header=V2rayConfig.OutboundBean.HeaderBean(type=HEADER_TYPE),mtu=1350,readBufferSize=1,seed=PATH,tti=50,uplinkCapacity=12,writeBufferSize=1)
         elif TYPE=="ws":
-            outboundBean_Stream_ws_settings=V2rayConfig.OutboundBean.WsSettingsBean(headers=V2rayConfig.OutboundBean.HeadersBean(Host=R_HOST,userAgent=None,acceptEncoding=None,Connection=None,Pragma=None,Host_single=None),path=PATH)
+            # if SECURITY != "tls" and R_HOST:
+            #     ws_headers = V2rayConfig.OutboundBean.HeadersBean(Host=R_HOST)
+            # else:
+            #     ws_headers=None
+            outboundBean_Stream_ws_settings=V2rayConfig.OutboundBean.WsSettingsBean(headers=None,path=PATH,host=R_HOST if R_HOST else None)
         elif TYPE=="httpupgrade":
             outboundBean_Stream_httpupgrade_settings=V2rayConfig.OutboundBean.HttpupgradeSettingsBean(host=R_HOST,path=PATH)
         elif TYPE=="xhttp":
