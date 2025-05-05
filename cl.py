@@ -258,7 +258,7 @@ def parse_configs(conifg,num=0,cv=1,hy2_path="hy2/config.yaml",is_hy2=False): # 
             tag=tag,
             id=vmess_data.get("id", ""),
             alter_id=int(vmess_data.get("aid", 0)),
-            scy=vmess_data.get("scy", "auto"),
+            scy=vmess_data.get("scy", ""),
             sni=vmess_data.get("sni", ""),
             fp=vmess_data.get("fp", ""),
             type=vmess_data.get("net","tcp"),
@@ -1166,11 +1166,11 @@ def parse_configs(conifg,num=0,cv=1,hy2_path="hy2/config.yaml",is_hy2=False): # 
         if TYPE=="kcp":
             outboundBean_Stream_kcp_settings=V2rayConfig.OutboundBean.KcpSettingsBean(congestion=False,downlinkCapacity=100,header=V2rayConfig.OutboundBean.HeaderBean(type=HEADER_TYPE),mtu=1350,readBufferSize=1,seed=PATH,tti=50,uplinkCapacity=12,writeBufferSize=1)
         elif TYPE=="ws":
-            # if SECURITY != "tls" and R_HOST:
-            #     ws_headers = V2rayConfig.OutboundBean.HeadersBean(Host=R_HOST)
-            # else:
-            #     ws_headers=None
-            outboundBean_Stream_ws_settings=V2rayConfig.OutboundBean.WsSettingsBean(headers=None,path=PATH,host=R_HOST if R_HOST else None)
+            if R_HOST:
+                ws_headers = V2rayConfig.OutboundBean.HeadersBean(Host=R_HOST)
+            else:
+                ws_headers=None
+            outboundBean_Stream_ws_settings=V2rayConfig.OutboundBean.WsSettingsBean(headers=ws_headers,path=PATH)
         elif TYPE=="httpupgrade":
             outboundBean_Stream_httpupgrade_settings=V2rayConfig.OutboundBean.HttpupgradeSettingsBean(host=R_HOST,path=PATH)
         elif TYPE=="xhttp":
@@ -1184,9 +1184,9 @@ def parse_configs(conifg,num=0,cv=1,hy2_path="hy2/config.yaml",is_hy2=False): # 
         elif TYPE=="grpc":
             outboundBean_Stream_grpc_settings=V2rayConfig.OutboundBean.GrpcSettingsBean(authority=R_HOST,serviceName=PATH,multiMode=MODE,)
         if SECURITY!="reality":
-            outboundBean_Stream_tlssettings=V2rayConfig.OutboundBean.TlsSettingsBean(allowInsecure=ALLOWINCREASE,alpn=ALPN,fingerprint=FP,serverName=SNI,show=False)
+            outboundBean_Stream_tlssettings=V2rayConfig.OutboundBean.TlsSettingsBean(allowInsecure=ALLOWINCREASE,alpn=None,fingerprint=None,serverName=SNI,show=False)
         else:
-            outboundBean_Stream_tlssettings=V2rayConfig.OutboundBean.TlsSettingsBean(allowInsecure=ALLOWINCREASE,alpn=ALPN,fingerprint=FP,publicKey=PBK,serverName=SNI,shortId=SID,spiderX=SPX,show=False)
+            outboundBean_Stream_tlssettings=V2rayConfig.OutboundBean.TlsSettingsBean(allowInsecure=ALLOWINCREASE,alpn=None,fingerprint=None,publicKey=PBK,serverName=SNI,shortId=SID,spiderX=SPX,show=False)
         if FRAGMENT:
             if  SECURITY=="reality" :
                 if TYPE=="tcp":
