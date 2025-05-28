@@ -1386,15 +1386,29 @@ def get_public_ipv4(t,port) -> Optional[str]:
 
     # فقط آدرس IPv4 (یا None) را برمی‌گردانیم
     return ip_address_v4
-def get_ip_details(ip_address,config):
+def get_ip_details(ip_address, original_config_str): # اسم پارامتر دوم رو واضح‌تر کردم
     global FIN_CONF
-    loc="None"
-    try:
-        response = requests.get(f'http://ip-api.com/json/{ip_address}', timeout=10)
-        loc= response.json().get('countryCode', 'None')
-    except Exception:
-        pass
-    FIN_CONF.append(f"{config}::{loc}")
+    country_code = "XX"
+    if ip_address:
+        try:
+
+            response = requests.get(f'http://ip-api.com/json/{ip_address}?fields=status,message,countryCode', timeout=5)
+            response.raise_for_status()
+            data = response.json()
+            if data.get("status") == "success" and data.get("countryCode"):
+                country_code = data.get('countryCode')
+                print(f"برای IP {ip_address}، کد کشور: {country_code} پیدا شد.")
+            else:
+                print(f"خطا یا عدم موفقیت در گرفتن کد کشور برای IP {ip_address}: {data.get('message', 'خطای نامشخص')}")
+        except requests.exceptions.Timeout:
+            print(f"تایم اوت در گرفتن جزئیات IP برای {ip_address}")
+        except requests.exceptions.RequestException as e:
+            print(f"خطا در درخواست جزئیات IP برای {ip_address}: {e}")
+        except Exception as e:
+            print(f"خطای پیش‌بینی نشده در get_ip_details برای {ip_address}: {e}")
+    else:
+        print("IP آدرس برای get_ip_details ارائه نشده است.")
+    FIN_CONF.append(f"{original_config_str.strip()}::{country_code}")
 def ping_all():
     print("igo")
     xray_abs = os.path.abspath("xray/xray")
@@ -1492,7 +1506,9 @@ def ping_all():
                 result = "-1"
             if result !="-1":
                 if CHECK_LOC:
-                    get_ip_details(get_public_ipv4(t+2,port))+"\n"
+                    public_ip = get_public_ipv4(t+2, port)
+                    if public_ip:
+                        get_ip_details(public_ip, i)
                 else:
                     FIN_CONF.append(i)
             if not is_dict:
