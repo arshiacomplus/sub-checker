@@ -1343,7 +1343,6 @@ def parse_configs(conifg,num=0,cv=1,hy2_path="hy2/config.yaml",is_hy2=False): # 
 def get_public_ipv4(t,port) -> Optional[str]:
     """
      تلاش می‌کند آدرس عمومی IPv4 را با استفاده از سرویس خارجی دریافت کند.
-
     Returns:
         Optional[str]: آدرس عمومی IPv4 به صورت رشته در صورت یافتن، در غیر این صورت None.
     """
@@ -1363,17 +1362,14 @@ def get_public_ipv4(t,port) -> Optional[str]:
         # فقط درخواست IPv4 را ارسال می‌کنیم
         response = requests.get(url_v4, timeout=timeout,proxies=proxies,headers=headers)
         response.raise_for_status()  # بررسی خطاهای HTTP (مثل 4xx, 5xx)
-
         # متن پاسخ را می‌خوانیم و فضاهای خالی احتمالی را حذف می‌کنیم
         ip_address_v4 = response.text.strip()
-
         # بررسی می‌کنیم که آیا پاسخ خالی است یا نه
         if not ip_address_v4:
             print("Warning: IPv4 API returned an empty response.")
             ip_address_v4 = None # اگر خالی بود، None در نظر می‌گیریم
         else:
             print(f"Successfully fetched IPv4: {ip_address_v4}")
-
     except requests.exceptions.Timeout:
         print("Fetching IPv4 address timed out.")
         ip_address_v4 = None # در صورت تایم‌اوت None برمی‌گردانیم
@@ -1383,32 +1379,58 @@ def get_public_ipv4(t,port) -> Optional[str]:
     except Exception as e:
         print(f"An unexpected error occurred fetching IPv4: {e}")
         ip_address_v4 = None # برای خطاهای پیش‌بینی نشده
-
     # فقط آدرس IPv4 (یا None) را برمی‌گردانیم
     return ip_address_v4
-def get_ip_details(ip_address, original_config_str): # اسم پارامتر دوم رو واضح‌تر کردم
+def get_ip_details(ip_address: Optional[str], original_config_str: str):
+    """
+    جزئیات IP (کد کشور) را دریافت کرده و کانفیگ را با تگ آپدیت شده
+    (شامل کد کشور) به لیست FIN_CONF اضافه می‌کند.
+    """
     global FIN_CONF
-    country_code = "XX"
+    country_code = "XX"  # کد کشور پیش‌فرض
     if ip_address:
         try:
-
-            response = requests.get(f'http://ip-api.com/json/{ip_address}?fields=status,message,countryCode', timeout=5)
+            response = requests.get(f'http://ip-api.com/json/{ip_address}?fields=status,message,countryCode', timeout=7)
             response.raise_for_status()
             data = response.json()
             if data.get("status") == "success" and data.get("countryCode"):
-                country_code = data.get('countryCode')
-                print(f"برای IP {ip_address}، کد کشور: {country_code} پیدا شد.")
+                fetched_code = data.get('countryCode')
+                if isinstance(fetched_code, str) and len(fetched_code) == 2 and fetched_code.isalpha():
+                    country_code = fetched_code.upper()
+                    print(f"برای IP {ip_address}، کد کشور: {country_code} پیدا شد.")
+                else:
+                    print(f"کد کشور نامعتبر '{fetched_code}' برای IP {ip_address} دریافت شد. از XX استفاده می‌شود.")
             else:
-                print(f"خطا یا عدم موفقیت در گرفتن کد کشور برای IP {ip_address}: {data.get('message', 'خطای نامشخص')}")
+                print(f"خطا یا عدم موفقیت در گرفتن کد کشور برای IP {ip_address}: {data.get('message', 'خطای نامشخص از ip-api')}. از XX استفاده می‌شود.")
         except requests.exceptions.Timeout:
-            print(f"تایم اوت در گرفتن جزئیات IP برای {ip_address}")
+            print(f"تایم اوت (Timeout) در گرفتن جزئیات IP برای {ip_address}. از XX استفاده می‌شود.")
         except requests.exceptions.RequestException as e:
-            print(f"خطا در درخواست جزئیات IP برای {ip_address}: {e}")
+            print(f"خطا در درخواست به ip-api برای {ip_address}: {e}. از XX استفاده می‌شود.")
+        except json.JSONDecodeError:
+            print(f"خطا در پارس کردن پاسخ JSON از ip-api برای {ip_address}. از XX استفاده می‌شود.")
         except Exception as e:
-            print(f"خطای پیش‌بینی نشده در get_ip_details برای {ip_address}: {e}")
+            print(f"خطای پیش‌بینی نشده در get_ip_details برای {ip_address}: {e}. از XX استفاده می‌شود.")
     else:
-        print("IP آدرس برای get_ip_details ارائه نشده است.")
-    FIN_CONF.append(f"{original_config_str.strip()}::{country_code}")
+        print(f"آدرس IP برای کانفیگ {original_config_str.strip()[:30]}... ارائه نشده است. از کد کشور پیش‌فرض XX استفاده می‌شود.")
+    config_stripped = original_config_str.strip()
+    parts = config_stripped.split("#", 1)
+    config_base = parts[0]
+    original_tag_encoded = parts[1] if len(parts) > 1 else ""
+    try:
+        original_tag_decoded = urllib.parse.unquote(original_tag_encoded)
+    except Exception:
+        original_tag_decoded = original_tag_encoded
+    if not original_tag_decoded.strip():
+        protocol_match = re.match(r"^\w+://", config_base)
+        protocol_name = protocol_match.group(0).replace("://","") if protocol_match else "config"
+        address_match = re.search(r"@?([^:]+):(\d+)", config_base)
+        server_brief = f"{address_match.group(1)}_{address_match.group(2)}" if address_match else "server"
+        original_tag_decoded = f"{protocol_name}_{server_brief}"
+    new_tag_unencoded = f"{original_tag_decoded.strip()}::{country_code}"
+    new_tag_encoded = urllib.parse.quote(new_tag_unencoded)
+    final_config_string = f"{config_base}#{new_tag_encoded}"
+    print(f"DEBUG: کانفیگ نهایی برای اضافه شدن به FIN_CONF: {final_config_string}")
+    FIN_CONF.append(final_config_string)
 def ping_all():
     print("igo")
     xray_abs = os.path.abspath("xray/xray")
@@ -1486,7 +1508,7 @@ def ping_all():
                     headers = {"Connection": "close"}
                     start = time.time()
                     response = requests.get(url, proxies=proxies, timeout=10, headers=headers)
-                    elapsed = (time.time() - start) * 1000 
+                    elapsed = (time.time() - start) * 1000
                     if response.status_code == 204 or (response.status_code == 200 and len(response.content) == 0):
                         return f"{int(elapsed)}"
                     else:
