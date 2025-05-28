@@ -29,10 +29,6 @@ LINK_PATH=[] # [ "link1" , "link2" , ... ]
 FIN_PATH="final.txt"
 FIN_CONF=[]
 CHECK_LOC=True
-CHECK_RES="loc.txt"
-if CHECK_LOC:
-    with open(CHECK_RES, "w") as f:
-        f.write("")
 def remove_empty_strings(input_list):
     return [item for item in input_list if item and item != "\n" ]
 with open(TEXT_PATH,"r") as f:
@@ -1390,12 +1386,15 @@ def get_public_ipv4(t,port) -> Optional[str]:
 
     # فقط آدرس IPv4 (یا None) را برمی‌گردانیم
     return ip_address_v4
-def get_ip_details(ip_address):
+def get_ip_details(ip_address,config):
+    global FIN_CONF
+    loc="None"
     try:
         response = requests.get(f'http://ip-api.com/json/{ip_address}', timeout=10)
-        return response.json().get('countryCode', 'None')
+        loc= response.json().get('countryCode', 'None')
     except Exception:
-        return 'None'
+        pass
+    FIN_CONF.append(f"{config}::{loc}")
 def ping_all():
     print("igo")
     xray_abs = os.path.abspath("xray/xray")
@@ -1433,6 +1432,7 @@ def ping_all():
             return value
         return {key: update_value(value) for key, value in input_dict.items()}
     def process_ping(i:str, t,counter=2) :
+        global FIN_CONF
         print(i)
         while t > 100:
             t-=100
@@ -1472,7 +1472,7 @@ def ping_all():
                     headers = {"Connection": "close"}
                     start = time.time()
                     response = requests.get(url, proxies=proxies, timeout=10, headers=headers)
-                    elapsed = (time.time() - start) * 1000  # Convert to milliseconds
+                    elapsed = (time.time() - start) * 1000 
                     if response.status_code == 204 or (response.status_code == 200 and len(response.content) == 0):
                         return f"{int(elapsed)}"
                     else:
@@ -1491,10 +1491,10 @@ def ping_all():
             except Exception:
                 result = "-1"
             if result !="-1":
-                FIN_CONF.append(i)
                 if CHECK_LOC:
-                    with open(CHECK_RES, "a") as f:
-                        f.write(get_ip_details(get_public_ipv4(t+2,port))+"\n")
+                    get_ip_details(get_public_ipv4(t+2,port))+"\n"
+                else:
+                    FIN_CONF.append(i)
             if not is_dict:
                 if i.startswith("hy2://") or i.startswith("hysteria2://"):
                     process_manager.stop_process(f"hysteria_{t}")
