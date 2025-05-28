@@ -60,18 +60,17 @@ jobs:
         run: |
           # نام فایل‌های خروجی که می‌خواهید کامیت شوند
           FILE1="final.txt"
-          FILE2="loc.txt"
 
           # بررسی اینکه آیا در *هر کدام* از فایل‌ها تغییری وجود دارد
           # git status --porcelain بدون آرگومان همه تغییرات را لیست می‌کند
-          if [[ -n $(git status --porcelain $FILE1 $FILE2) ]]; then
-            echo "Changes detected in $FILE1 or $FILE2. Committing..."
+          if [[ -n $(git status --porcelain $FILE1) ]]; then
+            echo "Changes detected in $FILE1. Committing..."
             # --- هر دو فایل را اضافه کنید ---
-            git add $FILE1 $FILE2
+            git add $FILE1
             # -------------------------------
             # پیام کامیت را کمی عمومی‌تر کنید
-            git commit -m "chore: Update results ($FILE1, $FILE2) [skip ci]"
+            git commit -m "chore: Update results ($FILE1) [skip ci]"
             git push origin HEAD:main
           else
-            echo "No changes detected in $FILE1 or $FILE2. Nothing to commit."
+            echo "No changes detected in $FILE1. Nothing to commit."
           fi
