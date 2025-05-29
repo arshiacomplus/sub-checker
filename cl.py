@@ -28,7 +28,7 @@ TEXT_PATH="normal.txt"
 LINK_PATH=[] # [ "link1" , "link2" , ... ]
 FIN_PATH="final.txt"
 FIN_CONF=[]
-CHECK_LOC=False
+CHECK_LOC=True
 def remove_empty_strings(input_list):
     return [item for item in input_list if item and item != "\n" ]
 with open(TEXT_PATH,"r") as f:
