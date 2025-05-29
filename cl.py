@@ -19,6 +19,7 @@ import base64
 import urllib.parse
 import urllib.request
 import signal
+os.system("chmod +x hy2/hysteria")
 IPDATA_API_KEY = "45d33281a59a93aeb7227414b15038f7a5a591c7e68962aa1c37d159"
 TH_MAX_WORKER=5
 CONF_PATH="config.json"
