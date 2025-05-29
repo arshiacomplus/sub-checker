@@ -20,7 +20,6 @@ import urllib.parse
 import urllib.request
 import signal
 IPDATA_API_KEY = "45d33281a59a93aeb7227414b15038f7a5a591c7e68962aa1c37d159"
-IPINFO_API_KEY = "YOUR_IPINFO_API_TOKEN"
 TH_MAX_WORKER=5
 CONF_PATH="config.json"
 with open(CONF_PATH,"r") as file_client_set:
@@ -1343,37 +1342,36 @@ def parse_configs(conifg,num=0,cv=1,hy2_path="hy2/config.yaml",is_hy2=False): # 
     data_conf=json.dumps(data_conf, indent=4, cls=MyEncoder)
     return data_conf
 def get_public_ipv4(t, port) -> Optional[str]:
-    ip_address_v4: Optional[str] = None
-    timeout = 15
-    url_v4 = "http://v4.ipv6-test.com/api/myip.php"
+    urls = [
+        "http://v4.ipv6-test.com/api/myip.php",
+        "https://api.ipify.org",
+        "https://icanhazip.com"
+    ]
     proxy_host = f"127.0.0.{t}"
-    proxies = {
-        "http": f"http://{proxy_host}:{port}",
-        "https": f"http://{proxy_host}:{port}"
-    }
-    headers = {
-        "Connection": "close"
-    }
-    print("Attempting to fetch public IPv4 address...")
-    try:
-        response = requests.get(url_v4, timeout=timeout, proxies=proxies, headers=headers)
-        response.raise_for_status()
-        ip_address_v4 = response.text.strip()
-        if not ip_address_v4:
-            print("Warning: IPv4 API returned an empty response.")
-            ip_address_v4 = None
-        else:
-            print(f"Successfully fetched IPv4: {ip_address_v4}")
-    except requests.exceptions.Timeout:
-        print("Fetching IPv4 address timed out.")
-        ip_address_v4 = None
-    except requests.exceptions.RequestException as e:
-        print(f"Error fetching IPv4 address: {e}")
-        ip_address_v4 = None
-    except Exception as e:
-        print(f"An unexpected error occurred fetching IPv4: {e}")
-        ip_address_v4 = None
-    return ip_address_v4
+    proxies = {"http": f"http://{proxy_host}:{port}", "https": f"http://{proxy_host}:{port}"}
+    headers = {"Connection": "close", "User-Agent": "Mozilla/5.0"}
+
+    for url in urls:
+        print(f"Attempting to fetch public IPv4 address from: {url}...")
+        try:
+            response = requests.get(url, timeout=10, proxies=proxies, headers=headers)
+            response.raise_for_status()
+            ip_address_v4 = response.text.strip()
+            if ip_address_v4 and re.match(r"^\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}$", ip_address_v4):
+                print(f"Successfully fetched IPv4: {ip_address_v4} from {url}")
+                return ip_address_v4
+            else:
+                print(f"Warning: Service {url} returned an invalid response: {ip_address_v4}")
+        except requests.exceptions.Timeout:
+            print(f"Fetching IPv4 address from {url} timed out.")
+        except requests.exceptions.HTTPError as e:
+            print(f"Error fetching IPv4 address from {url}: {e}")
+        except requests.exceptions.RequestException as e:
+            print(f"Request error fetching IPv4 address from {url}: {e}")
+        except Exception as e:
+            print(f"An unexpected error occurred fetching IPv4 from {url}: {e}")
+    print("Failed to fetch public IPv4 from all services.")
+    return None
 def should_retry_ip_api(exception):
     if isinstance(exception, (requests.exceptions.Timeout,
                               requests.exceptions.ConnectionError,
@@ -1647,8 +1645,7 @@ def ping_all():
             if result !="-1":
                 if CHECK_LOC:
                     public_ip = get_public_ipv4(t+2, port)
-                    if public_ip:
-                        get_ip_details(public_ip)
+                    get_ip_details(public_ip)
                 else:
                     FIN_CONF.append(i)
             if not is_dict:
