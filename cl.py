@@ -1390,46 +1390,42 @@ def should_retry_ip_api(exception):
     wait_exponential_max=10000,
     retry_on_exception=should_retry_ip_api
 )
-def fetch_country_code_from_api(ip_address: str) -> str:
-    print(f"Attempting to fetch country code for IP (using iplocation.net): {ip_address}...")
-    api_url = f"https://api.iplocation.net/?ip={ip_address}"
+def fetch_country_code_from_api(ip_address: str, t: int , port: int) -> str:
+    print(f"Attempting to fetch country code for IP (using ipinfo.io): {ip_address}...")
     try:
-        response = requests.get(api_url, timeout=10)
+        proxy_host = f"127.0.0.{t}"
+        proxies = {
+            "http": f"http://{proxy_host}:{port}",
+            "https": f"http://{proxy_host}:{port}"
+        }
+        headers = {
+            "Connection": "close"
+        }
+        response = requests.get(f'https://ipinfo.io/{ip_address}/json', timeout=7, proxies=proxies,headers=headers)
         response.raise_for_status()
         data = response.json()
-        if "response_code" in data and data["response_code"] != "200" and data["response_code"] != "":
-            if data["response_code"] == "200" or data["response_code"] == "":
-                 pass
-            else:
-                error_message_api = data.get("response_message", "Unknown error from iplocation.net API")
-                raise ValueError(f"API Error from iplocation.net for IP {ip_address}: {error_message_api} (Code: {data['response_code']})")
-        fetched_code = data.get('country_code2')
-        if fetched_code and isinstance(fetched_code, str) and len(fetched_code) == 2 and fetched_code.isalpha():
-            print(f"iplocation.net says country is: {fetched_code.upper()} for IP {ip_address}")
-            return fetched_code.upper()
-        else:
-            raise ValueError(f"Invalid or missing country_code2 ('{fetched_code}') from iplocation.net for IP {ip_address}. Full response: {data}")
-    except requests.exceptions.Timeout:
-        print(f"Timeout error fetching country code from iplocation.net for IP {ip_address}")
-        raise
-    except requests.exceptions.HTTPError as e:
-        print(f"HTTP error fetching country code from iplocation.net for IP {ip_address}: {e}")
-        raise
-    except requests.exceptions.RequestException as e:
-        print(f"Request error fetching country code from iplocation.net for IP {ip_address}: {e}")
-        raise
-    except json.JSONDecodeError:
-        print(f"JSONDecodeError for iplocation.net IP {ip_address}. Response: {response.text if 'response' in locals() else 'N/A'}")
-        raise
-    except ValueError as e:
-        print(str(e))
-        raise
-def get_ip_details(ip_address: Optional[str], original_config_str: str):
+    except RequestException:
+        proxy_host = f"127.0.0.{t}"
+        response = requests.get(f'https://ipinfo.io/{ip_address}/json', timeout=7)
+        response.raise_for_status()
+        data = response.json()
+
+    if "bogon" in data and data["bogon"] == True:
+        raise ValueError(f"IP {ip_address} is a bogon IP according to ipinfo.io.")
+
+    fetched_code = data.get('country')
+    if fetched_code and isinstance(fetched_code, str) and len(fetched_code) == 2 and fetched_code.isalpha():
+        print(f"ipinfo.io says country is: {fetched_code.upper()} for IP {ip_address}")
+        return fetched_code.upper()
+    else:
+        error_message = data.get('error', {}).get('message', f"Invalid or missing country code '{fetched_code}' from ipinfo.io")
+        raise ValueError(f"Error from ipinfo.io for IP {ip_address}: {error_message}")
+def get_ip_details(ip_address: Optional[str], original_config_str: str, t: int , port: int):
     global FIN_CONF
     country_code = "XX"
     if ip_address:
         try:
-            country_code = fetch_country_code_from_api(ip_address)
+            country_code = fetch_country_code_from_api(ip_address, t, port)
             print(f"Successfully fetched country code: {country_code} for IP {ip_address} after retries.")
         except ValueError as e:
             print(f"{e}. Using default XX.")
@@ -1612,7 +1608,7 @@ def ping_all():
                 if CHECK_LOC:
                     public_ip = get_public_ipv4(t+2, port)
                     if public_ip:
-                        get_ip_details(public_ip, i)
+                        get_ip_details(public_ip, i,t+2, port )
                 else:
                     FIN_CONF.append(i)
             if not is_dict:
