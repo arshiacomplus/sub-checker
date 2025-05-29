@@ -1391,19 +1391,21 @@ def should_retry_ip_api(exception):
     retry_on_exception=should_retry_ip_api
 )
 def fetch_country_code_from_api(ip_address: str) -> str:
-    print(f"Attempting to fetch country code for IP: {ip_address}...")
-    response = requests.get(f'http://ip-api.com/json/{ip_address}?fields=status,message,countryCode', timeout=7)
+    print(f"Attempting to fetch country code for IP (using ipinfo.io): {ip_address}...")
+    response = requests.get(f'https://ipinfo.io/{ip_address}/json', timeout=7)
     response.raise_for_status()
     data = response.json()
-    if data.get("status") == "success" and data.get("countryCode"):
-        fetched_code = data.get('countryCode')
-        if isinstance(fetched_code, str) and len(fetched_code) == 2 and fetched_code.isalpha():
-            return fetched_code.upper()
-        else:
-            raise ValueError(f"Invalid country code '{fetched_code}' received for IP {ip_address}.")
+
+    if "bogon" in data and data["bogon"] == True:
+        raise ValueError(f"IP {ip_address} is a bogon IP according to ipinfo.io.")
+
+    fetched_code = data.get('country')
+    if fetched_code and isinstance(fetched_code, str) and len(fetched_code) == 2 and fetched_code.isalpha():
+        print(f"ipinfo.io says country is: {fetched_code.upper()} for IP {ip_address}")
+        return fetched_code.upper()
     else:
-        error_message = data.get('message', 'Unknown error from ip-api or status not success')
-        raise ValueError(f"Error from ip-api for IP {ip_address}: {error_message}")
+        error_message = data.get('error', {}).get('message', f"Invalid or missing country code '{fetched_code}' from ipinfo.io")
+        raise ValueError(f"Error from ipinfo.io for IP {ip_address}: {error_message}")
 def get_ip_details(ip_address: Optional[str], original_config_str: str):
     global FIN_CONF
     country_code = "XX"
@@ -1591,7 +1593,6 @@ def ping_all():
             if result !="-1":
                 if CHECK_LOC:
                     public_ip = get_public_ipv4(t+2, port)
-                    print(public_ip)
                     if public_ip:
                         get_ip_details(public_ip, i)
                 else:
