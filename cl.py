@@ -19,6 +19,8 @@ import base64
 import urllib.parse
 import urllib.request
 import signal
+IPDATA_API_KEY = "45d33281a59a93aeb7227414b15038f7a5a591c7e68962aa1c37d159"
+IPINFO_API_KEY = "YOUR_IPINFO_API_TOKEN"
 TH_MAX_WORKER=5
 CONF_PATH="config.json"
 with open(CONF_PATH,"r") as file_client_set:
@@ -1390,42 +1392,80 @@ def should_retry_ip_api(exception):
     wait_exponential_max=10000,
     retry_on_exception=should_retry_ip_api
 )
-def fetch_country_code_from_api(ip_address: str, t: int , port: int) -> str:
-    print(f"Attempting to fetch country code for IP (using ipinfo.io): {ip_address}...")
+def fetch_country_code_with_fallback(ip_address: str) -> str:
+    print(f"Fetching country code for IP: {ip_address}")
+
     try:
-        proxy_host = f"127.0.0.{t}"
-        proxies = {
-            "http": f"http://{proxy_host}:{port}",
-            "https": f"http://{proxy_host}:{port}"
-        }
-        headers = {
-            "Connection": "close"
-        }
-        response = requests.get(f'https://ipinfo.io/{ip_address}/json', timeout=7, proxies=proxies,headers=headers)
-        response.raise_for_status()
-        data = response.json()
-    except RequestException:
-        proxy_host = f"127.0.0.{t}"
-        response = requests.get(f'https://ipinfo.io/{ip_address}/json', timeout=7)
-        response.raise_for_status()
-        data = response.json()
+        print(f"  Attempting with ipdata.co...")
+        if not IPDATA_API_KEY or IPDATA_API_KEY == "YOUR_IPDATA_API_KEY":
+            print("  Error: IPDATA_API_KEY is not configured for ipdata.co. Skipping.")
+            raise ValueError("IPDATA_API_KEY not set") # برای رفتن به fallback
 
-    if "bogon" in data and data["bogon"] == True:
-        raise ValueError(f"IP {ip_address} is a bogon IP according to ipinfo.io.")
+        api_url_ipdata = f"https://api.ipdata.co/{ip_address}?api-key={IPDATA_API_KEY}"
+        response_ipdata = requests.get(api_url_ipdata, timeout=10)
+        data_ipdata = response_ipdata.json()
 
-    fetched_code = data.get('country')
-    if fetched_code and isinstance(fetched_code, str) and len(fetched_code) == 2 and fetched_code.isalpha():
-        print(f"ipinfo.io says country is: {fetched_code.upper()} for IP {ip_address}")
-        return fetched_code.upper()
-    else:
-        error_message = data.get('error', {}).get('message', f"Invalid or missing country code '{fetched_code}' from ipinfo.io")
-        raise ValueError(f"Error from ipinfo.io for IP {ip_address}: {error_message}")
-def get_ip_details(ip_address: Optional[str], original_config_str: str, t: int , port: int):
+        if response_ipdata.status_code != 200:
+            error_message_http = data_ipdata.get("message", f"ipdata.co HTTP error {response_ipdata.status_code}")
+            if "quota" in error_message_http.lower() or "exceeded" in error_message_http.lower() or \
+               "invalid api key" in error_message_http.lower() or response_ipdata.status_code in [401, 403, 429]: # 401 Unauthorized هم اضافه شد
+                print(f"  ipdata.co failed (quota/key/permission): {error_message_http}. Triggering fallback.")
+                raise ConnectionError(f"Fallback: ipdata.co: {error_message_http}")
+            else:
+                print(f"  ipdata.co HTTP error for IP {ip_address}: {error_message_http}")
+                raise requests.exceptions.HTTPError(error_message_http, response=response_ipdata)
+
+        if "message" in data_ipdata:
+            api_error_message = data_ipdata["message"]
+            if "quota" in api_error_message.lower() or "exceeded" in api_error_message.lower() or \
+               "invalid api key" in api_error_message.lower():
+                print(f"  ipdata.co API error (quota/key): {api_error_message}. Triggering fallback.")
+                raise ConnectionError(f"Fallback: ipdata.co API: {api_error_message}")
+            else:
+                print(f"  ipdata.co API message for IP {ip_address}: {api_error_message}")
+                raise ValueError(f"ipdata.co API message: {api_error_message}")
+
+        fetched_code_ipdata = data_ipdata.get('country_code')
+        if fetched_code_ipdata and isinstance(fetched_code_ipdata, str) and len(fetched_code_ipdata) == 2 and fetched_code_ipdata.isalpha():
+            print(f"  Success with ipdata.co: Country is {fetched_code_ipdata.upper()} for IP {ip_address}")
+            return fetched_code_ipdata.upper()
+        else:
+            print(f"  Invalid data from ipdata.co for IP {ip_address}. Response: {data_ipdata}. Triggering fallback.")
+            raise ValueError("Invalid data from ipdata.co, triggering fallback.")
+
+    except (requests.exceptions.RequestException, ConnectionError, ValueError, json.JSONDecodeError) as e_ipdata:
+        print(f"  Failed with ipdata.co: {type(e_ipdata).__name__} - {str(e_ipdata)[:100]}. Proceeding to fallback (ipinfo.io).")
+
+        try:
+            print(f"    Attempting with ipinfo.io...")
+            api_url_ipinfo = f"https://ipinfo.io/{ip_address}/json"
+
+            response_ipinfo = requests.get(api_url_ipinfo, timeout=10)
+            # ipinfo.io معمولا برای خطاهای توکن/محدودیت از کدهای 4xx استفاده می‌کند
+            response_ipinfo.raise_for_status()
+            data_ipinfo = response_ipinfo.json()
+
+            if "bogon" in data_ipinfo and data_ipinfo["bogon"] is True: # بررسی دقیقتر برای True
+                print(f"    ipinfo.io reports IP {ip_address} as bogon.")
+                raise ValueError(f"IP {ip_address} is a bogon IP (ipinfo.io).")
+
+            fetched_code_ipinfo = data_ipinfo.get('country')
+            if fetched_code_ipinfo and isinstance(fetched_code_ipinfo, str) and len(fetched_code_ipinfo) == 2 and fetched_code_ipinfo.isalpha():
+                print(f"    Success with ipinfo.io: Country is {fetched_code_ipinfo.upper()} for IP {ip_address}")
+                return fetched_code_ipinfo.upper()
+            else:
+                print(f"    Invalid or missing country_code from ipinfo.io for IP {ip_address}. Response: {data_ipinfo}")
+                raise ValueError(f"Invalid or missing country code from ipinfo.io: '{fetched_code_ipinfo}'")
+
+        except (requests.exceptions.RequestException, ValueError, json.JSONDecodeError) as e_ipinfo:
+            print(f"    Failed with ipinfo.io as well: {type(e_ipinfo).__name__} - {str(e_ipinfo)[:100]}")
+            raise ValueError(f"Both ipdata.co and ipinfo.io failed for IP {ip_address}.") from e_ipinfo
+def get_ip_details(ip_address: Optional[str], original_config_str: str):
     global FIN_CONF
     country_code = "XX"
     if ip_address:
         try:
-            country_code = fetch_country_code_from_api(ip_address, t, port)
+            country_code = fetch_country_code_with_fallback(ip_address)
             print(f"Successfully fetched country code: {country_code} for IP {ip_address} after retries.")
         except ValueError as e:
             print(f"{e}. Using default XX.")
@@ -1608,7 +1648,7 @@ def ping_all():
                 if CHECK_LOC:
                     public_ip = get_public_ipv4(t+2, port)
                     if public_ip:
-                        get_ip_details(public_ip, i,t+2, port )
+                        get_ip_details(public_ip)
                 else:
                     FIN_CONF.append(i)
             if not is_dict:
