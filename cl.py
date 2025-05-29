@@ -28,7 +28,7 @@ TEXT_PATH="normal.txt"
 LINK_PATH=[] # [ "link1" , "link2" , ... ]
 FIN_PATH="final.txt"
 FIN_CONF=[]
-CHECK_LOC=True
+CHECK_LOC=False
 def remove_empty_strings(input_list):
     return [item for item in input_list if item and item != "\n" ]
 with open(TEXT_PATH,"r") as f:
@@ -1591,6 +1591,7 @@ def ping_all():
             if result !="-1":
                 if CHECK_LOC:
                     public_ip = get_public_ipv4(t+2, port)
+                    print(public_ip)
                     if public_ip:
                         get_ip_details(public_ip, i)
                 else:
