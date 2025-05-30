@@ -1661,7 +1661,7 @@ def ping_all():
             if result !="-1":
                 if CHECK_LOC:
                     public_ip = get_public_ipv4(t+2, port)
-                    get_ip_details(public_ip,t)
+                    get_ip_details(public_ip,i)
                 else:
                     FIN_CONF.append(i)
             if not is_dict:
