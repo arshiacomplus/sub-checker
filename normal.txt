@@ -1,1 +1,1 @@
-hysteria2://14bdcd31-8a9f-4cf1-8fcc-60045900357d@107.175.34.118:3002?security=tls&insecure=0&sni=us.10101251.xyz#Channel+id%3A+%40ShadowProxy66%F0%9F%87%BA%F0%9F%87%B8
+hysteria2://dongtaiwang.com@46.17.41.5:12904?security=tls&insecure=1&sni=apple.com#%F0%9F%87%B7%F0%9F%87%BA+%40NTGreen+%F0%9F%91%BD
