@@ -1614,6 +1614,7 @@ def ping_all():
                 if i.startswith("hy2://") or i.startswith("hysteria2://"):
                     th3h = threading.Thread(target=s_hy2,args=(hy2_path_test_file,t,))
                     th3h.start()
+                    time.sleep(3)     
             th3 = threading.Thread(target=s_xray,args=(path_test_file,t,))
             th3.start()
             time.sleep(3)
