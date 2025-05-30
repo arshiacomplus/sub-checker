@@ -1393,8 +1393,11 @@ def should_retry_ip_api(exception):
 )
 def fetch_country_code_with_fallback(ip_address: str) -> str:
     print(f"Fetching country code for IP: {ip_address}")
-
+    if not ip_address:
+        print("no ips found")
+        return
     try:
+        
         print(f"  Attempting with ipdata.co...")
         if not IPDATA_API_KEY or IPDATA_API_KEY == "YOUR_IPDATA_API_KEY":
             print("  Error: IPDATA_API_KEY is not configured for ipdata.co. Skipping.")
@@ -1461,6 +1464,7 @@ def fetch_country_code_with_fallback(ip_address: str) -> str:
             raise ValueError(f"Both ipdata.co and ipinfo.io failed for IP {ip_address}.") from e_ipinfo
 def get_ip_details(ip_address: Optional[str], original_config_str: str):
     global FIN_CONF
+    print(f"DEBUG_IP_DETAILS: Entered get_ip_details. IP: '{ip_address}', Config: '{original_config_str[:50]}...'") 
     country_code = "XX"
     if ip_address:
         try:
@@ -1552,10 +1556,10 @@ def ping_all():
     print("igo")
     xray_abs = os.path.abspath("xray/xray")
     def s_xray(conf_path,t):
-        proc=subprocess.Popen([xray_abs, 'run', '-c', conf_path])
+        proc=subprocess.Popen([xray_abs, 'run', '-c', conf_path], stdout=subprocess.PIPE,stderr=subprocess.PIPE)
         process_manager.add_process(f"xray_{t}", proc.pid)
     def s_hy2(path_file,t):
-        hy=subprocess.Popen (['hy2/hysteria', 'client' ,'-c' , path_file], stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL,stderr=subprocess.DEVNULL)
+        hy=subprocess.Popen (['hy2/hysteria', 'client' ,'-c' , path_file], stdin=subprocess.DEVNULL, stdout=subprocess.PIPE,stderr=subprocess.PIPE)
         process_manager.add_process(f"hysteria_{t}", hy.pid)
     def load_config():
         try:
