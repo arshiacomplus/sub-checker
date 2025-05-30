@@ -1,1 +1,1 @@
-hysteria2://dongtaiwang.com@46.17.41.5:12904?security=tls&insecure=1&sni=apple.com#%F0%9F%87%B7%F0%9F%87%BA+%40NTGreen+%F0%9F%91%BD
+hy2://dongtaiwang.com@46.17.41.5:12904?security=tls&insecure=1&sni=apple.com#%F0%9F%87%B7%F0%9F%87%BA+%40NTGreen+%F0%9F%91%BD
