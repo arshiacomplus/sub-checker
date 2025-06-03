@@ -31,6 +31,12 @@ LINK_PATH=[] # [ "link1" , "link2" , ... ]
 FIN_PATH="final.txt"
 FIN_CONF=[]
 CHECK_LOC=True
+CHECK_IRAN=True
+CHECK_HOST_IRANIAN_NODES = [
+    "ir1.node.check-host.net",  # Tehran, AS44244 Mobile Communication Company of Iran (MCI)
+    "ir2.node.check-host.net",  # Tehran, AS12880 Telecommunication Infrastructure Company (TIC زیرساخت)
+    "ir3.node.check-host.net",  # Tehran, AS58224 Rightel
+]
 def remove_empty_strings(input_list):
     return [item for item in input_list if item and item != "\n" ]
 with open(TEXT_PATH,"r") as f:
@@ -151,12 +157,13 @@ def parse_configs(conifg,num=0,cv=1,hy2_path="hy2/config.yaml",is_hy2=False): # 
         """Parse all possible parameters from config strings"""
         try:
             config = config.strip()
+            config = urllib.parse.unquote(config)
             config_parts = config.split('#', 1)
             main_config = config_parts[0]
             print(config_parts)
-            tag = config_parts[1] if len(config_parts) > 1 else ""
+            tag = urllib.parse.unquote(config_parts[1]) if len(config_parts) > 1 else ""
             protocol = next((p for p in ["vless", "vmess", "trojan", "hy2", "hysteria2",
-                                        "ss", "socks", "wireguard"] if main_config.startswith(p)), None)
+                                        "ss", "socks", "wireguard"] if main_config.startswith(p+ "://")), None)
             if not protocol:
                 raise ValueError("Invalid protocol")
             common_params = {"protocol": protocol, "tag": tag}
@@ -357,14 +364,84 @@ def parse_configs(conifg,num=0,cv=1,hy2_path="hy2/config.yaml",is_hy2=False): # 
             wpayloadsize=params.get("wpayloadsize", "1-8")
         )
     def parse_shadowsocks(config: str, common: dict) -> ConfigParams:
-        auth_part = config.split("://")[1].split("@")[0]
-        method_pass = base64.b64decode(auth_part).decode("utf-8").split(":")
-        return ConfigParams(
+        main_part = config.split("ss://", 1)[1].split("#", 1)[0]
+        ss_method = "chacha20-poly1305"
+        ss_password = ""
+        address = common.get("address", "")
+        port = common.get("port", 0)
+        try:
+            if "@" in main_part:
+                parts = main_part.split("@", 1)
+                auth_encoded = parts[0]
+                server_info = parts[1]
+                auth_decoded_bytes = base64.b64decode(auth_encoded)
+                auth_decoded_str = auth_decoded_bytes.decode("utf-8")
+                method_pass_parts = auth_decoded_str.split(":", 1)
+                if len(method_pass_parts) == 2:
+                    ss_method = method_pass_parts[0]
+                    ss_password = method_pass_parts[1]
+                else:
+                    logging.warning(f"SS: Auth part '{auth_decoded_str}' not in 'method:pass' format. Using defaults or what's available.")
+                    if ":" not in auth_decoded_str and auth_decoded_str:
+                        ss_password = auth_decoded_str
+                if ":" in server_info:
+                    server_parts = server_info.rsplit(":", 1)
+                    address = server_parts[0]
+                    try:
+                        port = int(server_parts[1])
+                    except ValueError:
+                        logging.error(f"SS: Invalid port in server_info: {server_info}")
+                        return ConfigParams(protocol=common.get("protocol", "ss"), address="", port=0, tag=common.get("tag", "PARSE_ERROR_SS"))
+                else:
+                    address = server_info
+                    logging.warning(f"SS: Port not found in server_info: {server_info}. Using port from common if available.")
+            else:
+                decoded_bytes = base64.b64decode(main_part)
+                decoded_str = decoded_bytes.decode("utf-8")
+                if "@" in decoded_str:
+                    auth_part_decoded, server_info_decoded = decoded_str.split("@", 1)
+                    method_pass_parts = auth_part_decoded.split(":", 1)
+                    if len(method_pass_parts) == 2:
+                        ss_method = method_pass_parts[0]
+                        ss_password = method_pass_parts[1]
+                    else:
+                        logging.warning(f"SS (Full Base64): Auth part '{auth_part_decoded}' not in 'method:pass' format.")
+                        if ":" not in auth_part_decoded and auth_part_decoded:
+                            ss_password = auth_part_decoded
+                    if ":" in server_info_decoded:
+                        server_parts = server_info_decoded.rsplit(":", 1)
+                        address = server_parts[0]
+                        try:
+                            port = int(server_parts[1])
+                        except ValueError:
+                            logging.error(f"SS (Full Base64): Invalid port in server_info_decoded: {server_info_decoded}")
+                            return ConfigParams(protocol=common.get("protocol", "ss"), address="", port=0, tag=common.get("tag", "PARSE_ERROR_SS_FULLB64"))
+                    else:
+                        address = server_info_decoded
+                        logging.warning(f"SS (Full Base64): Port not found in server_info_decoded: {server_info_decoded}. Using default port 0.")
+                        port = 0
+                else:
+                    logging.error(f"SS: Decoded string '{decoded_str}' from full Base64 is not in 'auth@server:port' format.")
+                    return ConfigParams(protocol=common.get("protocol", "ss"), address="", port=0, tag=common.get("tag", "PARSE_ERROR_SS_MALFORMED_B64"))
+        except (base64.binascii.Error, UnicodeDecodeError) as e:
+            logging.error(f"SS: Base64 decoding error for '{main_part[:50]}...': {e}")
+            return ConfigParams(protocol=common.get("protocol", "ss"), address="", port=0, tag=common.get("tag", "PARSE_ERROR_SS_B64DEC"))
+        except Exception as e:
+            logging.error(f"SS: Unexpected error parsing shadowsocks config '{config[:50]}...': {e}")
+            return ConfigParams(protocol=common.get("protocol", "ss"), address="", port=0, tag=common.get("tag", "PARSE_ERROR_SS_UNEXPECTED"))
+        plugin_params = {}
+        if "?" in config:
+            query_str = config.split("?", 1)[1].split("#", 1)[0]
+            plugin_params = parse_query_params(query_str)
+        final_params = {
             **common,
-            ss_method=method_pass[0],
-            ss_password=method_pass[1],
-            security="none"
-        )
+            "ss_method": ss_method,
+            "ss_password": ss_password,
+            "address": address,
+            "port": port,
+            "security": "none",
+        }
+        return ConfigParams(**final_params)
     def parse_query_params(query: str) -> Dict[str, str]:
         params = {}
         for pair in query.split("&"):
@@ -1353,6 +1430,103 @@ def parse_configs(conifg,num=0,cv=1,hy2_path="hy2/config.yaml",is_hy2=False): # 
     data_conf=replace_accept_encoding(data_conf)
     data_conf=json.dumps(data_conf, indent=4, cls=MyEncoder)
     return data_conf
+def is_ip_accessible_from_iran_via_check_host(ip_to_check_on_checkhost: str,
+                                               proxies_to_use: Optional[dict],
+                                               timeout_seconds: int = 35) -> Optional[bool]:
+    """
+    Checks if an IP address (ip_to_check_on_checkhost) is pingable from Iran using check-host.net,
+    with the request to check-host.net itself going through proxies_to_use.
+    Returns:
+        False: If ip_to_check_on_checkhost is accessible from Iran (confirmed by check-host).
+        True: If ip_to_check_on_checkhost is inaccessible from Iran (confirmed by check-host).
+        None: If check-host.net service had an issue (rate limit, error, inconclusive) when accessed via proxies_to_use.
+    """
+    if not ip_to_check_on_checkhost:
+        print(f"CHECK-HOST (via proxy): No target IP provided to check on check-host.net.")
+        return True
+    proxy_display = proxies_to_use.get('http', 'None') if proxies_to_use else 'None'
+    print(f"CHECK-HOST (via proxy {proxy_display}): Checking Iran PING for target IP {ip_to_check_on_checkhost}")
+    check_host_api_url_base = "https://check-host.net/check-ping"
+    headers = {"Accept": "application/json", "User-Agent": "MyConfigTester/1.2"}
+    accessible_from_at_least_one_node = False
+    any_node_test_completed_without_service_error = False
+    for node_idx, node in enumerate(CHECK_HOST_IRANIAN_NODES):
+        if accessible_from_at_least_one_node:
+            break
+        try:
+            init_url = f"{check_host_api_url_base}?host={ip_to_check_on_checkhost}&node={node}&max_nodes=1"
+            response_init = requests.get(init_url, headers=headers, timeout=10, proxies=proxies_to_use)
+            if response_init.status_code == 429:
+                print(f"  CH_PROXY: Rate limited by check-host.net for {ip_to_check_on_checkhost} (node {node}) when using proxy {proxy_display}.")
+                return None
+            response_init.raise_for_status()
+            init_data = response_init.json()
+            if init_data.get("ok") != 1:
+                error_msg = init_data.get('error', 'Unknown error during PING check initiation')
+                print(f"  CH_PROXY: PING init API error for {ip_to_check_on_checkhost} (node {node}) (proxy {proxy_display}): {error_msg}")
+                if "limit for your ip" in error_msg.lower() or "many requests" in error_msg.lower():
+                    return None
+                any_node_test_completed_without_service_error = True
+                continue
+            request_id = init_data.get("request_id")
+            if not request_id:
+                print(f"  CH_PROXY: No request_id for {ip_to_check_on_checkhost} (node {node}) (proxy {proxy_display}).")
+                any_node_test_completed_without_service_error = True
+                continue
+            result_url = f"https://check-host.net/check-result/{request_id}"
+            polling_deadline = time.time() + (timeout_seconds - 10)
+            node_ping_to_target_successful = False
+            while time.time() < polling_deadline:
+                time.sleep(3)
+                try:
+                    response_result = requests.get(result_url, headers=headers, timeout=5, proxies=proxies_to_use)
+                    if response_result.status_code == 429:
+                        print(f"  CH_PROXY: Rate limited during polling for {request_id} (node {node}) (proxy {proxy_display}).")
+                        return None
+                    response_result.raise_for_status()
+                    result_data_for_all_nodes_in_req = response_result.json()
+                    if not result_data_for_all_nodes_in_req: continue
+                    node_specific_result_list = result_data_for_all_nodes_in_req.get(node)
+                    if node_specific_result_list:
+                        any_node_test_completed_without_service_error = True
+                        if isinstance(node_specific_result_list, list) and len(node_specific_result_list) > 0:
+                            first_attempt_group = node_specific_result_list[0]
+                            if first_attempt_group and isinstance(first_attempt_group, list) and len(first_attempt_group) > 0:
+                                ping_stats = first_attempt_group[0]
+                                if ping_stats and isinstance(ping_stats, list) and len(ping_stats) >= 4:
+                                    avg_rtt_val_str = ping_stats[3]
+                                    if avg_rtt_val_str is not None and "ms" in avg_rtt_val_str:
+                                        print(f"  CH_PROXY: Target IP {ip_to_check_on_checkhost} ACCESSIBLE from Iran via {node} (RTT: {avg_rtt_val_str}) (accessed via proxy {proxy_display}).")
+                                        accessible_from_at_least_one_node = True
+                                        node_ping_to_target_successful = True
+                                        break
+                                    else:
+                                        break
+                                else: break
+                            else: break
+                        break
+                except requests.exceptions.RequestException as e_poll_req:
+                    print(f"  CH_PROXY: RequestException polling {request_id} ({node}) (proxy {proxy_display}): {e_poll_req}")
+                    return None
+                except Exception as e_poll_other:
+                    print(f"  CH_PROXY: Generic error polling {request_id} ({node}) (proxy {proxy_display}): {e_poll_other}")
+                    return None
+            if node_ping_to_target_successful:
+                break
+        except requests.exceptions.RequestException as e_init_req:
+            print(f"  CH_PROXY: RequestException initiating PING for {ip_to_check_on_checkhost} (node {node}) (proxy {proxy_display}): {e_init_req}")
+            if node_idx == 0: return None
+        except Exception as e_init_other:
+            print(f"  CH_PROXY: Generic error initiating PING for {ip_to_check_on_checkhost} (node {node}) (proxy {proxy_display}): {e_init_other}")
+            if node_idx == 0: return None
+    if accessible_from_at_least_one_node:
+        return False # is ok
+    if any_node_test_completed_without_service_error:
+        print(f"CH_PROXY: Target IP {ip_to_check_on_checkhost} INACCESSIBLE from Iran based on completed check-host tests (via proxy {proxy_display}).")
+        return True
+    else:
+        print(f"CH_PROXY: No Iranian node completed the test for {ip_to_check_on_checkhost} without service errors (when accessed via proxy {proxy_display}). Concluding issue with proxy or check-host access.")
+        return None
 def get_public_ipv4(t, port) -> Optional[str]:
     urls = [
         "http://v4.ipv6-test.com/api/myip.php",
@@ -1362,7 +1536,6 @@ def get_public_ipv4(t, port) -> Optional[str]:
     proxy_host = f"127.0.0.{t}"
     proxies = {"http": f"http://{proxy_host}:{port}", "https": f"http://{proxy_host}:{port}"}
     headers = {"Connection": "close", "User-Agent": "Mozilla/5.0"}
-
     for url in urls:
         print(f"Attempting to fetch public IPv4 address from: {url}...")
         try:
@@ -1396,6 +1569,45 @@ def should_retry_ip_api(exception):
             return True
     print(f"Not retrying for error: {exception}")
     return False
+
+def fetch_exit_country_code_via_proxy(proxies_to_use: Optional[dict]) -> str:
+    print(f"Fetching EXIT country code using proxy {proxies_to_use.get('http') if proxies_to_use else 'None'}")
+    try:
+        print(f"  Attempting with ipinfo.io/json...")
+        api_url_ipinfo = "https://ipinfo.io/json"
+        response_ipinfo = requests.get(api_url_ipinfo, timeout=10, proxies=proxies_to_use)
+        response_ipinfo.raise_for_status()
+        data_ipinfo = response_ipinfo.json()
+        exit_ip = data_ipinfo.get('ip')
+        country_code = data_ipinfo.get('country')
+        if country_code and isinstance(country_code, str) and len(country_code) == 2 and country_code.isalpha():
+            print(f"  Success with ipinfo.io: Exit IP {exit_ip}, Country {country_code.upper()}")
+            return country_code.upper()
+        else:
+            print(f"  Invalid or missing country from ipinfo.io. Response: {data_ipinfo}")
+            raise ValueError("Invalid data from ipinfo.io")
+    except (requests.exceptions.RequestException, ValueError, json.JSONDecodeError) as e_ipinfo:
+        print(f"  Failed with ipinfo.io: {e_ipinfo}. Proceeding to fallback (ipdata.co)...")
+    try:
+        print(f"  Attempting with ipdata.co (no IP)...")
+        if not IPDATA_API_KEY or IPDATA_API_KEY == "YOUR_IPDATA_API_KEY":
+            print("  Error: IPDATA_API_KEY not configured for ipdata.co. Skipping.")
+            raise ValueError("IPDATA_API_KEY not set")
+        api_url_ipdata = f"https://api.ipdata.co?api-key={IPDATA_API_KEY}"
+        response_ipdata = requests.get(api_url_ipdata, timeout=10, proxies=proxies_to_use)
+        data_ipdata = response_ipdata.json()
+        exit_ip = data_ipdata.get('ip')
+        country_code = data_ipdata.get('country_code')
+        if country_code and isinstance(country_code, str) and len(country_code) == 2 and country_code.isalpha():
+            print(f"  Success with ipdata.co: Exit IP {exit_ip}, Country {country_code.upper()}")
+            return country_code.upper()
+        else:
+            # ...
+            raise ValueError("Invalid data from ipdata.co")
+    except Exception as e_ipdata:
+        print(f"  Failed with ipdata.co as well: {e_ipdata}")
+        print("  All location services failed. Returning XX.")
+        return "XX"
 @retry(
     stop_max_attempt_number=3,
     wait_exponential_multiplier=1000,
@@ -1408,26 +1620,22 @@ def fetch_country_code_with_fallback(ip_address: str) -> str:
         print("no ips found")
         return
     try:
-        
         print(f"  Attempting with ipdata.co...")
         if not IPDATA_API_KEY or IPDATA_API_KEY == "YOUR_IPDATA_API_KEY":
             print("  Error: IPDATA_API_KEY is not configured for ipdata.co. Skipping.")
-            raise ValueError("IPDATA_API_KEY not set") # برای رفتن به fallback
-
+            raise ValueError("IPDATA_API_KEY not set")
         api_url_ipdata = f"https://api.ipdata.co/{ip_address}?api-key={IPDATA_API_KEY}"
         response_ipdata = requests.get(api_url_ipdata, timeout=10)
         data_ipdata = response_ipdata.json()
-
         if response_ipdata.status_code != 200:
             error_message_http = data_ipdata.get("message", f"ipdata.co HTTP error {response_ipdata.status_code}")
             if "quota" in error_message_http.lower() or "exceeded" in error_message_http.lower() or \
-               "invalid api key" in error_message_http.lower() or response_ipdata.status_code in [401, 403, 429]: # 401 Unauthorized هم اضافه شد
+               "invalid api key" in error_message_http.lower() or response_ipdata.status_code in [401, 403, 429]:
                 print(f"  ipdata.co failed (quota/key/permission): {error_message_http}. Triggering fallback.")
                 raise ConnectionError(f"Fallback: ipdata.co: {error_message_http}")
             else:
                 print(f"  ipdata.co HTTP error for IP {ip_address}: {error_message_http}")
                 raise requests.exceptions.HTTPError(error_message_http, response=response_ipdata)
-
         if "message" in data_ipdata:
             api_error_message = data_ipdata["message"]
             if "quota" in api_error_message.lower() or "exceeded" in api_error_message.lower() or \
@@ -1437,7 +1645,6 @@ def fetch_country_code_with_fallback(ip_address: str) -> str:
             else:
                 print(f"  ipdata.co API message for IP {ip_address}: {api_error_message}")
                 raise ValueError(f"ipdata.co API message: {api_error_message}")
-
         fetched_code_ipdata = data_ipdata.get('country_code')
         if fetched_code_ipdata and isinstance(fetched_code_ipdata, str) and len(fetched_code_ipdata) == 2 and fetched_code_ipdata.isalpha():
             print(f"  Success with ipdata.co: Country is {fetched_code_ipdata.upper()} for IP {ip_address}")
@@ -1445,23 +1652,17 @@ def fetch_country_code_with_fallback(ip_address: str) -> str:
         else:
             print(f"  Invalid data from ipdata.co for IP {ip_address}. Response: {data_ipdata}. Triggering fallback.")
             raise ValueError("Invalid data from ipdata.co, triggering fallback.")
-
     except (requests.exceptions.RequestException, ConnectionError, ValueError, json.JSONDecodeError) as e_ipdata:
         print(f"  Failed with ipdata.co: {type(e_ipdata).__name__} - {str(e_ipdata)[:100]}. Proceeding to fallback (ipinfo.io).")
-
         try:
             print(f"    Attempting with ipinfo.io...")
             api_url_ipinfo = f"https://ipinfo.io/{ip_address}/json"
-
             response_ipinfo = requests.get(api_url_ipinfo, timeout=10)
-            # ipinfo.io معمولا برای خطاهای توکن/محدودیت از کدهای 4xx استفاده می‌کند
             response_ipinfo.raise_for_status()
             data_ipinfo = response_ipinfo.json()
-
-            if "bogon" in data_ipinfo and data_ipinfo["bogon"] is True: # بررسی دقیقتر برای True
+            if "bogon" in data_ipinfo and data_ipinfo["bogon"] is True:
                 print(f"    ipinfo.io reports IP {ip_address} as bogon.")
                 raise ValueError(f"IP {ip_address} is a bogon IP (ipinfo.io).")
-
             fetched_code_ipinfo = data_ipinfo.get('country')
             if fetched_code_ipinfo and isinstance(fetched_code_ipinfo, str) and len(fetched_code_ipinfo) == 2 and fetched_code_ipinfo.isalpha():
                 print(f"    Success with ipinfo.io: Country is {fetched_code_ipinfo.upper()} for IP {ip_address}")
@@ -1469,17 +1670,16 @@ def fetch_country_code_with_fallback(ip_address: str) -> str:
             else:
                 print(f"    Invalid or missing country_code from ipinfo.io for IP {ip_address}. Response: {data_ipinfo}")
                 raise ValueError(f"Invalid or missing country code from ipinfo.io: '{fetched_code_ipinfo}'")
-
         except (requests.exceptions.RequestException, ValueError, json.JSONDecodeError) as e_ipinfo:
             print(f"    Failed with ipinfo.io as well: {type(e_ipinfo).__name__} - {str(e_ipinfo)[:100]}")
             raise ValueError(f"Both ipdata.co and ipinfo.io failed for IP {ip_address}.") from e_ipinfo
-def get_ip_details(ip_address: Optional[str], original_config_str: str):
+def get_ip_details(ip_address: Optional[str], original_config_str: str,proxies_to_use: Optional[dict]):
     global FIN_CONF
-    print(f"DEBUG_IP_DETAILS: Entered get_ip_details. IP: '{ip_address}', Config: '{original_config_str[:50]}...'") 
+    print(f"DEBUG_IP_DETAILS: Entered get_ip_details. IP: '{ip_address}', Config: '{original_config_str[:50]}...'")
     country_code = "XX"
     if ip_address:
         try:
-            country_code = fetch_country_code_with_fallback(ip_address)
+            country_code = fetch_exit_country_code_via_proxy(proxies_to_use)
             print(f"Successfully fetched country code: {country_code} for IP {ip_address} after retries.")
         except ValueError as e:
             print(f"{e}. Using default XX.")
@@ -1631,11 +1831,11 @@ def ping_all():
             os.remove(path_test_file)
             if os.path.exists(hy2_path_test_file):
                 os.remove(hy2_path_test_file)
+            proxies = {"http": f"http://127.0.0.{t+2}:{port}",
+                            "https": f"http://127.0.0.{t+2}:{port}"}
             @retry(stop_max_attempt_number=3, wait_fixed=500, retry_on_exception=lambda x: isinstance(x, Exception))
             def pingg():
                 try:
-                    proxies = {"http": f"http://127.0.0.{t+2}:{port}",
-                            "https": f"http://127.0.0.{t+2}:{port}"}
                     url = test_link_
                     headers = {"Connection": "close"}
                     start = time.time()
@@ -1661,9 +1861,18 @@ def ping_all():
             if result !="-1":
                 if CHECK_LOC:
                     public_ip = get_public_ipv4(t+2, port)
-                    get_ip_details(public_ip,i)
+                    if CHECK_IRAN:
+                        if is_ip_accessible_from_iran_via_check_host(public_ip,proxies):
+                            get_ip_details(public_ip,i,proxies)
+                    else:
+                        get_ip_details(public_ip,i,proxies)
                 else:
-                    FIN_CONF.append(i)
+                    if CHECK_IRAN:
+                        public_ip = get_public_ipv4(t+2, port)
+                        if is_ip_accessible_from_iran_via_check_host(public_ip,proxies):
+                            FIN_CONF.append(i)
+                    else:
+                        FIN_CONF.append(i)
             if not is_dict:
                 if i.startswith("hy2://") or i.startswith("hysteria2://"):
                     process_manager.stop_process(f"hysteria_{t}")
