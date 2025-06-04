@@ -1697,6 +1697,7 @@ def get_ip_details(ip_address: Optional[str], original_config_str: str,proxies_t
         print(f"IP address not provided for config {original_config_str.strip()[:30]}... Using default country code XX.")
     config_stripped = original_config_str.strip()
     processed_as_vmess_successfully = False
+    country_code_pattern = r"::([A-Z]{2}|XX)$"
     if config_stripped.startswith("vmess://"):
         try:
             vmess_link_parts = config_stripped.replace("vmess://", "", 1).split("#", 1)
@@ -1708,6 +1709,11 @@ def get_ip_details(ip_address: Optional[str], original_config_str: str,proxies_t
             decoded_json_str = decoded_bytes.decode('utf-8')
             vmess_data = json.loads(decoded_json_str)
             original_ps = vmess_data.get("ps", "")
+            current_tag_base = original_ps.strip()
+            match = re.search(country_code_pattern, current_tag_base)
+            if match:
+                original_ps = current_tag_base[:match.start()]
+
             if not isinstance(original_ps, str):
                 original_ps = str(original_ps)
             if not original_ps.strip():
@@ -1738,6 +1744,10 @@ def get_ip_details(ip_address: Optional[str], original_config_str: str,proxies_t
             original_tag_decoded = urllib.parse.unquote(original_tag_encoded)
         except Exception:
             original_tag_decoded = original_tag_encoded
+        current_tag_base = original_tag_decoded.strip()
+        match = re.search(country_code_pattern, current_tag_base)
+        if match:
+            original_tag_decoded = current_tag_base[:match.start()]
         if not original_tag_decoded.strip():
             protocol_match = re.match(r"^\w+://", config_base)
             protocol_name = protocol_match.group(0).replace("://","").lower() if protocol_match else "config"
