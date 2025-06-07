@@ -37,10 +37,21 @@ CHECK_HOST_IRANIAN_NODES = [
     "ir2.node.check-host.net",  # Tehran, AS12880 Telecommunication Infrastructure Company (TIC زیرساخت)
     "ir3.node.check-host.net",  # Tehran, AS58224 Rightel
 ]
+def clear_p(configs_list: list) -> list:
+    unique_configs = {}
+    for config_line in configs_list:
+        config_line = config_line.strip()
+        if not config_line:
+            continue
+        base_config = config_line.split('#', 1)[0]
+        if base_config not in unique_configs:
+            unique_configs[base_config] = config_line
+    final_list = [f"{config}\n" for config in unique_configs.values()]
+    return final_list
 def remove_empty_strings(input_list):
     return [item for item in input_list if item and item != "\n" ]
 with open(TEXT_PATH,"r") as f:
-    conf=remove_empty_strings(f.readlines())
+    conf=clear_p(remove_empty_strings(f.readlines()))
 class ProcessManager:
     """
     Manages background processes (like Xray, Hysteria) started by the script.
