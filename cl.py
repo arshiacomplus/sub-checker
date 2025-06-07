@@ -1569,7 +1569,6 @@ def should_retry_ip_api(exception):
             return True
     print(f"Not retrying for error: {exception}")
     return False
-
 def fetch_exit_country_code_via_proxy(proxies_to_use: Optional[dict]) -> str:
     print(f"Fetching EXIT country code using proxy {proxies_to_use.get('http') if proxies_to_use else 'None'}")
     try:
@@ -1709,19 +1708,12 @@ def get_ip_details(ip_address: Optional[str], original_config_str: str,proxies_t
             decoded_json_str = decoded_bytes.decode('utf-8')
             vmess_data = json.loads(decoded_json_str)
             original_ps = vmess_data.get("ps", "")
-            current_tag_base = original_ps.strip()
-            match = re.search(country_code_pattern, current_tag_base)
-            if match:
-                original_ps = current_tag_base[:match.start()]
-
-            if not isinstance(original_ps, str):
-                original_ps = str(original_ps)
-            if not original_ps.strip():
+            base_name = original_ps.strip().split("::")[0]
+            if not base_name.strip():
                 add = vmess_data.get("add", "unknown_host")
                 port = vmess_data.get("port", "0")
-                original_ps = f"vmess_{add}_{port}"
-                print(f"Field 'ps' in vmess config was empty or non-existent, using default name '{original_ps}' for internal 'ps'.")
-            new_ps = f"{original_ps.strip()}::{country_code}"
+                base_name = f"vmess_{add}_{port}"
+            new_ps = f"{base_name.strip()}::{country_code}"
             vmess_data["ps"] = new_ps
             updated_json_str = json.dumps(vmess_data, ensure_ascii=False, separators=(',', ':'))
             updated_base64_bytes = base64.b64encode(updated_json_str.encode('utf-8'))
@@ -1744,7 +1736,7 @@ def get_ip_details(ip_address: Optional[str], original_config_str: str,proxies_t
             original_tag_decoded = urllib.parse.unquote(original_tag_encoded)
         except Exception:
             original_tag_decoded = original_tag_encoded
-        current_tag_base = original_tag_decoded.strip()
+        current_tag_base = original_tag_decoded.strip().split("::")[0]
         match = re.search(country_code_pattern, current_tag_base)
         if match:
             original_tag_decoded = current_tag_base[:match.start()]
