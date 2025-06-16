@@ -40,7 +40,7 @@ CHECK_HOST_IRANIAN_NODES = [
 def remove_empty_strings(input_list):
     return [item for item in input_list if item and item != "\n" ]
 def clear_p(configs_list: list) -> list:
-    unique_configs = {}  # دیکشنری برای نگهداری کانفیگ‌های منحصربه‌فرد
+    unique_configs = {}
     for config_line in configs_list:
         config_line = config_line.strip()
         if not config_line:
@@ -1308,7 +1308,7 @@ def parse_configs(conifg,num=0,cv=1,hy2_path="hy2/config.yaml",is_hy2=False): # 
                 elif TYPE=="httpupgrade":
                     outboundBean_Stream_tcp=V2rayConfig.OutboundBean.StreamSettingsBean(network="httpupgrade",security=SECURITY,httpupgradeSettings=outboundBean_Stream_httpupgrade_settings,realitySettings=outboundBean_Stream_tlssettings,sockopt=V2rayConfig.OutboundBean.SockoptBean(dialerProxy="fragment",tcpKeepAliveIdle=100,mark=255))
                 elif TYPE=="xhttp":
-                    outboundBean_Stream_tcp=V2rayConfig.OutboundBean.StreamSettingsBean(network="httpx",security=SECURITY,xhttpSettings=outboundBean_Stream_xhttp_settings,realitySettings=outboundBean_Stream_tlssettings,sockopt=V2rayConfig.OutboundBean.SockoptBean(dialerProxy="fragment",tcpKeepAliveIdle=100,mark=255))
+                    outboundBean_Stream_tcp=V2rayConfig.OutboundBean.StreamSettingsBean(network="xhttp",security=SECURITY,xhttpSettings=outboundBean_Stream_xhttp_settings,realitySettings=outboundBean_Stream_tlssettings,sockopt=V2rayConfig.OutboundBean.SockoptBean(dialerProxy="fragment",tcpKeepAliveIdle=100,mark=255))
                 elif TYPE=="splithttp":
                     outboundBean_Stream_tcp=V2rayConfig.OutboundBean.StreamSettingsBean(network="splithttp",security=SECURITY,splithttpSettings=outboundBean_Stream_splithttp_settings,realitySettings=outboundBean_Stream_tlssettings,sockopt=V2rayConfig.OutboundBean.SockoptBean(dialerProxy="fragment",tcpKeepAliveIdle=100,mark=255))
                 elif TYPE=="h2":
@@ -1327,7 +1327,7 @@ def parse_configs(conifg,num=0,cv=1,hy2_path="hy2/config.yaml",is_hy2=False): # 
                 elif TYPE=="httpupgrade":
                     outboundBean_Stream_tcp=V2rayConfig.OutboundBean.StreamSettingsBean(network="httpupgrade",security=SECURITY,httpupgradeSettings=outboundBean_Stream_httpupgrade_settings,tlsSettings=outboundBean_Stream_tlssettings,sockopt=V2rayConfig.OutboundBean.SockoptBean(dialerProxy="fragment",tcpKeepAliveIdle=100,mark=255))
                 elif TYPE=="xhttp":
-                    outboundBean_Stream_tcp=V2rayConfig.OutboundBean.StreamSettingsBean(network="httpx",security=SECURITY,xhttpSettings=outboundBean_Stream_xhttp_settings,sockopt=V2rayConfig.OutboundBean.SockoptBean(dialerProxy="fragment",tcpKeepAliveIdle=100,mark=255))
+                    outboundBean_Stream_tcp=V2rayConfig.OutboundBean.StreamSettingsBean(network="xhttp",security=SECURITY,xhttpSettings=outboundBean_Stream_xhttp_settings,sockopt=V2rayConfig.OutboundBean.SockoptBean(dialerProxy="fragment",tcpKeepAliveIdle=100,mark=255))
                 elif TYPE=="splithttp":
                     outboundBean_Stream_tcp=V2rayConfig.OutboundBean.StreamSettingsBean(network="splithttp",security=SECURITY,splithttpSettings=outboundBean_Stream_splithttp_settings,tlsSettings=outboundBean_Stream_tlssettings,sockopt=V2rayConfig.OutboundBean.SockoptBean(dialerProxy="fragment",tcpKeepAliveIdle=100,mark=255))
                 elif TYPE=="h2":
@@ -1347,7 +1347,7 @@ def parse_configs(conifg,num=0,cv=1,hy2_path="hy2/config.yaml",is_hy2=False): # 
                 elif TYPE=="httpupgrade":
                     outboundBean_Stream_tcp=V2rayConfig.OutboundBean.StreamSettingsBean(network="httpupgrade",security=SECURITY,httpupgradeSettings=outboundBean_Stream_httpupgrade_settings,realitySettings=outboundBean_Stream_tlssettings)
                 elif TYPE=="xhttp":
-                    outboundBean_Stream_tcp=V2rayConfig.OutboundBean.StreamSettingsBean(network="httpx",security=SECURITY,xhttpSettings=outboundBean_Stream_xhttp_settings,realitySettings=outboundBean_Stream_tlssettings)
+                    outboundBean_Stream_tcp=V2rayConfig.OutboundBean.StreamSettingsBean(network="xhttp",security=SECURITY,xhttpSettings=outboundBean_Stream_xhttp_settings,realitySettings=outboundBean_Stream_tlssettings)
                 elif TYPE=="splithttp":
                     outboundBean_Stream_tcp=V2rayConfig.OutboundBean.StreamSettingsBean(network="splithttp",security=SECURITY,splithttpSettings=outboundBean_Stream_splithttp_settings,realitySettings=outboundBean_Stream_tlssettings)
                 elif TYPE=="h2":
@@ -1366,7 +1366,7 @@ def parse_configs(conifg,num=0,cv=1,hy2_path="hy2/config.yaml",is_hy2=False): # 
                 elif TYPE=="httpupgrade":
                     outboundBean_Stream_tcp=V2rayConfig.OutboundBean.StreamSettingsBean(network="httpupgrade",security=SECURITY,httpupgradeSettings=outboundBean_Stream_httpupgrade_settings,tlsSettings=outboundBean_Stream_tlssettings)
                 elif TYPE=="xhttp":
-                    outboundBean_Stream_tcp=V2rayConfig.OutboundBean.StreamSettingsBean(network="httpx",security=SECURITY,xhttpSettings=outboundBean_Stream_xhttp_settings)
+                    outboundBean_Stream_tcp=V2rayConfig.OutboundBean.StreamSettingsBean(network="xhttp",security=SECURITY,xhttpSettings=outboundBean_Stream_xhttp_settings)
                 elif TYPE=="splithttp":
                     outboundBean_Stream_tcp=V2rayConfig.OutboundBean.StreamSettingsBean(network="splithttp",security=SECURITY,splithttpSettings=outboundBean_Stream_splithttp_settings,tlsSettings=outboundBean_Stream_tlssettings)
                 elif TYPE=="h2":
