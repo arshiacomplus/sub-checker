@@ -1754,6 +1754,7 @@ def get_ip_details(ip_address: Optional[str], original_config_str: str,proxies_t
         parts = config_stripped.split("#", 1)
         config_base = parts[0]
         original_tag_encoded = parts[1] if len(parts) > 1 else ""
+        current_tag_base = original_tag_decoded.strip().split("::")[0]
         try:
             original_tag_decoded = urllib.parse.unquote(original_tag_encoded)
         except Exception:
@@ -1782,7 +1783,7 @@ def get_ip_details(ip_address: Optional[str], original_config_str: str,proxies_t
                  print(f"Original tag for vmess config (specialized processing failed) was empty, using '{original_tag_decoded}' for generic tagging.")
             else:
                  print(f"Original tag for '{protocol_name}' config was empty or non-existent, using '{original_tag_decoded}'.")
-        new_tag_unencoded = f"{original_tag_decoded.strip()}::{country_code}"
+        new_tag_unencoded = f"{current_tag_base.strip()}::{country_code}"
         new_tag_encoded = urllib.parse.quote(new_tag_unencoded)
         final_config_string = f"{config_base}#{new_tag_encoded}"
         print(f"DEBUG (Generic/Fallback): Final config with generic tag: {final_config_string}")
