@@ -1701,24 +1701,14 @@ def get_ip_details(ip_address: Optional[str], original_config_str: str,proxies_t
     if ip_address:
         try:
             country_code = fetch_exit_country_code_via_proxy(proxies_to_use)
-            print(f"Successfully fetched country code: {country_code} for IP {ip_address} after retries.")
-        except ValueError as e:
-            print(f"{e}. Using default XX.")
-        except requests.exceptions.HTTPError as e:
-            print(f"HTTP error from ip-api (after retries) for {ip_address}: {e}. Using default XX.")
-        except requests.exceptions.Timeout:
-            print(f"Final timeout fetching IP details for {ip_address}. Using default XX.")
-        except requests.exceptions.RequestException as e:
-            print(f"Final network error requesting ip-api for {ip_address}: {e}. Using default XX.")
-        except json.JSONDecodeError:
-            print(f"Final error parsing JSON response from ip-api for {ip_address}. Using default XX.")
+            print(f"Successfully fetched country code: {country_code} for IP {ip_address}.")
         except Exception as e:
-            print(f"Final unexpected error fetching country code for {ip_address}: {e}. Using default XX.")
+            print(f"An unexpected error occurred fetching country code for {ip_address}: {e}. Using default XX.")
     else:
         print(f"IP address not provided for config {original_config_str.strip()[:30]}... Using default country code XX.")
+
     config_stripped = original_config_str.strip()
     processed_as_vmess_successfully = False
-    country_code_pattern = r"::([A-Z]{2}|XX)$"
     if config_stripped.startswith("vmess://"):
         try:
             vmess_link_parts = config_stripped.replace("vmess://", "", 1).split("#", 1)
@@ -1744,26 +1734,27 @@ def get_ip_details(ip_address: Optional[str], original_config_str: str,proxies_t
             print(f"DEBUG (Vmess): Final config with updated 'ps': {final_config_string}")
             FIN_CONF.append(final_config_string)
             processed_as_vmess_successfully = True
-        except (base64.binascii.Error, UnicodeDecodeError) as e:
-            print(f"Error decoding base64 or utf-8 for vmess config: {config_stripped[:50]}... Error: {e}. Using generic tagging for this vmess link.")
-        except json.JSONDecodeError as e:
-            print(f"Error parsing internal JSON for vmess config: {config_stripped[:50]}... Error: {e}. Using generic tagging for this vmess link.")
-        except Exception as e:
-            print(f"Unexpected error during specialized vmess config processing {config_stripped[:50]}...: {e}. Using generic tagging for this vmess link.")
+        except (base64.binascii.Error, UnicodeDecodeError, json.JSONDecodeError, Exception) as e:
+            print(f"Error processing specialized vmess config {config_stripped[:50]}...: {e}. Falling back to generic tagging.")
+            processed_as_vmess_successfully = False 
     if not processed_as_vmess_successfully:
         parts = config_stripped.split("#", 1)
         config_base = parts[0]
         original_tag_encoded = parts[1] if len(parts) > 1 else ""
-        current_tag_base = original_tag_decoded.strip().split("::")[0]
+
         try:
             original_tag_decoded = urllib.parse.unquote(original_tag_encoded)
         except Exception:
             original_tag_decoded = original_tag_encoded
+
         current_tag_base = original_tag_decoded.strip().split("::")[0]
+
+        country_code_pattern = r"::([A-Z]{2}|XX)$"
         match = re.search(country_code_pattern, current_tag_base)
         if match:
-            original_tag_decoded = current_tag_base[:match.start()]
-        if not original_tag_decoded.strip():
+            current_tag_base = current_tag_base[:match.start()]
+
+        if not current_tag_base.strip():
             protocol_match = re.match(r"^\w+://", config_base)
             protocol_name = protocol_match.group(0).replace("://","").lower() if protocol_match else "config"
             server_part_for_tag = config_base.split("://", 1)[-1].split("?",1)[0].split("#",1)[0]
@@ -1778,11 +1769,9 @@ def get_ip_details(ip_address: Optional[str], original_config_str: str,proxies_t
                     server_brief += f"_{port_for_tag}"
             elif host_info_candidate and len(host_info_candidate.split(':')[0]) < 50 :
                  server_brief = host_info_candidate.split(':')[0]
-            original_tag_decoded = f"{protocol_name}_{server_brief}"
-            if config_stripped.startswith("vmess://"):
-                 print(f"Original tag for vmess config (specialized processing failed) was empty, using '{original_tag_decoded}' for generic tagging.")
-            else:
-                 print(f"Original tag for '{protocol_name}' config was empty or non-existent, using '{original_tag_decoded}'.")
+            current_tag_base = f"{protocol_name}_{server_brief}"
+            print(f"Original tag for '{protocol_name}' config was empty, using generated tag: '{current_tag_base}'.")
+
         new_tag_unencoded = f"{current_tag_base.strip()}::{country_code}"
         new_tag_encoded = urllib.parse.quote(new_tag_unencoded)
         final_config_string = f"{config_base}#{new_tag_encoded}"
