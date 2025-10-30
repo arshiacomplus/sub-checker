@@ -39,6 +39,11 @@ jobs:
           
           echo "Successfully moved and renamed binaries. Final structure of 'vendor' directory:"
           ls -l vendor
+      - name: Set Execute Permissions
+        run: |
+          chmod +x vendor/xray_linux
+          chmod +x vendor/hysteria_linux
+          echo "Execute permissions set on binaries."
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
